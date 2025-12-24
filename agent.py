@@ -14,7 +14,6 @@ from main import generate_resume_pdf
 import os
 from markitdown import MarkItDown
 
-from google import genai
 
 
 from langchain.agents import create_agent
