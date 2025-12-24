@@ -1,0 +1,13 @@
+pdfplumber
+typing_extensions
+python-dotenv
+python-docx
+reportlab
+markitdown[all]
+langchain
+langgraph
+langchain-groq
+google-genai
+python-dotenv
+watchdog
+reportlab
