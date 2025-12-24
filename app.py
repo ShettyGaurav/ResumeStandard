@@ -3,7 +3,6 @@ import os
 import threading
 from pathlib import Path
 import time
-
 from automate import main  # ✅ use main directly
 
 # ---------------- CONFIG ----------------

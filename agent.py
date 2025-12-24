@@ -6,7 +6,6 @@ import json
 from collections import defaultdict
 import pprint
 from docx import Document
-
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
@@ -23,8 +22,8 @@ from langchain_groq import ChatGroq
 
 load_dotenv()
 
-client = genai.Client()
-model_name = "gemini-2.0-flash"
+# client = genai.Client()
+# model_name = "gemini-2.0-flash"
 
 
 class State(TypedDict):
@@ -110,8 +109,8 @@ def get_content(state: State):
 def get_content_markdown(state: State):
     file_path = state.get("file_path")
     md = MarkItDown(enable_plugins=False)  # Set to True to enable plugins
-    if file_path.endswith(".jpg"):
-        md = MarkItDown(llm_client=client, llm_model=model_name)
+    # if file_path.endswith(".jpg"):
+    #     md = MarkItDown(llm_client=client, llm_model=model_name)
     result = md.convert(file_path)
     print("Markdown content started---------------------------------------")
     print(result.text_content)
