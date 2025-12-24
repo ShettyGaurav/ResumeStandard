@@ -12,6 +12,7 @@ from reportlab.lib.units import inch
 from main import generate_resume_pdf
 import os
 from markitdown import MarkItDown
+import streamlit as st
 
 
 
@@ -39,8 +40,9 @@ class State(TypedDict):
     classified_pages: str
     sections: Annotated[List[str], operator.add]
 
-
+print("API Key: ",st.secrets["GROQ_API_KEY"])
 llm = ChatGroq(
+    api_key=st.secrets["GROQ_API_KEY"],
     model="llama-3.3-70b-versatile",
     temperature=0,
     max_tokens=None,

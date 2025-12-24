@@ -23,18 +23,29 @@ st.caption("Upload folders or files · Auto-processed via LangGraph")
 # ---------------- START WATCHDOG (ONCE) ----------------
 
 def start_watchdog():
+    print("Starting main")
     main()  # blocking watchdog loop
 
 if "watchdog_started" not in st.session_state:
     st.session_state.watchdog_started = False
 
-if not st.session_state.watchdog_started:
+# if not st.session_state.watchdog_started:
+#     print("Starting watchdog")
+#     # watchdog_thread = threading.Thread(
+#     #     target=start_watchdog,
+#     #     daemon=True,   # 🔑 critical: exits with Streamlit
+#     # )
+#     # watchdog_thread.start()
+#     st.session_state.watchdog_started = True
+
+def runThread():
+    print("Starting thread")
     watchdog_thread = threading.Thread(
         target=start_watchdog,
         daemon=True,   # 🔑 critical: exits with Streamlit
     )
     watchdog_thread.start()
-    st.session_state.watchdog_started = True
+    print("Ending thread")
 
 # ---------------- STATUS ----------------
 
@@ -59,9 +70,9 @@ if uploaded_files:
 
         with open(dest_path, "wb") as f:
             f.write(file.getbuffer())
-
+    
         st.success(f"Added: {filename}")
-
+    runThread()
     st.info("Files stored in ResumeFolder. Processing will begin automatically.")
 
 # ---------------- INPUT FILES ----------------
@@ -74,6 +85,7 @@ input_files = sorted(Path(INPUT_DIR).glob("*"))
 if not input_files:
     st.warning("No input files found.")
 else:
+    print("Got input files")
     for file in input_files:
         col1, col2 = st.columns([4, 1])
         col1.text(file.name)

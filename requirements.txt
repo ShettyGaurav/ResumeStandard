@@ -11,3 +11,5 @@ google-genai
 python-dotenv
 watchdog
 reportlab
+fastapi
+streamlit

@@ -4,6 +4,8 @@ import time
 import os
 from agent import get_response
 
+print("Automate file called")
+
 INPUT_DIR = "ResumeFolder"
 OUTPUT_DIR = "OutputFolder"
 
@@ -34,6 +36,7 @@ class ResumeFolderHandler(FileSystemEventHandler):
 
 
 def main():
+    print("Main App")
     event_handler = ResumeFolderHandler()
     observer = Observer()
     observer.schedule(event_handler, INPUT_DIR, recursive=False)
