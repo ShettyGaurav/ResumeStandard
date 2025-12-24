@@ -33,7 +33,7 @@ class ResumeFolderHandler(FileSystemEventHandler):
         get_response(file_path)
 
 
-if __name__ == "__main__":
+def main():
     event_handler = ResumeFolderHandler()
     observer = Observer()
     observer.schedule(event_handler, INPUT_DIR, recursive=False)

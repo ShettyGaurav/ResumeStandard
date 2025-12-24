@@ -1,30 +1,16 @@
 import streamlit as st
 import os
-import signal
-import subprocess
+import threading
 from pathlib import Path
 import time
+
+from automate import main  # ✅ use main directly
 
 # ---------------- CONFIG ----------------
 
 INPUT_DIR = "ResumeFolder"
 OUTPUT_DIR = "OutputFolder"
-WATCHDOG_SCRIPT = "automate.py"
-
-
 VALID_EXTS = (".pdf", ".docx")
-
-
-if "watchdog_started" not in st.session_state:
-    st.session_state.watchdog_started = False
-
-if not st.session_state.watchdog_started:
-    st.session_state.watchdog_process = subprocess.Popen(
-        ["python", WATCHDOG_SCRIPT],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    st.session_state.watchdog_started = True
 
 # ---------------- SETUP ----------------
 
@@ -35,8 +21,30 @@ st.set_page_config(page_title="Resume Processor", layout="wide")
 st.title("📁 Resume Folder Processor")
 st.caption("Upload folders or files · Auto-processed via LangGraph")
 
+# ---------------- START WATCHDOG (ONCE) ----------------
+
+def start_watchdog():
+    main()  # blocking watchdog loop
+
+if "watchdog_started" not in st.session_state:
+    st.session_state.watchdog_started = False
+
+if not st.session_state.watchdog_started:
+    watchdog_thread = threading.Thread(
+        target=start_watchdog,
+        daemon=True,   # 🔑 critical: exits with Streamlit
+    )
+    watchdog_thread.start()
+    st.session_state.watchdog_started = True
+
+# ---------------- STATUS ----------------
+
+st.subheader("🟢 Background Processor Status")
+st.success("automate.py is running")
+
 # ---------------- UPLOAD SECTION ----------------
 
+st.divider()
 st.subheader("⬆️ Upload Folder or Files")
 
 uploaded_files = st.file_uploader(
@@ -102,6 +110,8 @@ else:
                     file.name,
                     key=f"out-{file.name}",
                 )
+
+# ---------------- MANUAL REFRESH ----------------
 
 st.divider()
 if st.button("🔄 Refresh Output Folder"):
