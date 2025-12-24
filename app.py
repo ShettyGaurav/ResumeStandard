@@ -1,5 +1,7 @@
 import streamlit as st
 import os
+import signal
+import subprocess
 from pathlib import Path
 import time
 
@@ -7,8 +9,22 @@ import time
 
 INPUT_DIR = "ResumeFolder"
 OUTPUT_DIR = "OutputFolder"
+WATCHDOG_SCRIPT = "automate.py"
+
 
 VALID_EXTS = (".pdf", ".docx")
+
+
+if "watchdog_started" not in st.session_state:
+    st.session_state.watchdog_started = False
+
+if not st.session_state.watchdog_started:
+    st.session_state.watchdog_process = subprocess.Popen(
+        ["python", WATCHDOG_SCRIPT],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    st.session_state.watchdog_started = True
 
 # ---------------- SETUP ----------------
 
