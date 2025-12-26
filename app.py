@@ -3,7 +3,7 @@ import os
 import threading
 from pathlib import Path
 import time
-from automate import main  # ✅ use main directly
+from automate import start_watchdog  # ✅ Import non-blocking starter
 
 # ---------------- CONFIG ----------------
 
@@ -22,30 +22,12 @@ st.caption("Upload folders or files · Auto-processed via LangGraph")
 
 # ---------------- START WATCHDOG (ONCE) ----------------
 
-def start_watchdog():
-    print("Starting main")
-    main()  # blocking watchdog loop
+if "watchdog_observer" not in st.session_state:
+    st.session_state.watchdog_observer = None
 
-if "watchdog_started" not in st.session_state:
-    st.session_state.watchdog_started = False
-
-# if not st.session_state.watchdog_started:
-#     print("Starting watchdog")
-#     # watchdog_thread = threading.Thread(
-#     #     target=start_watchdog,
-#     #     daemon=True,   # 🔑 critical: exits with Streamlit
-#     # )
-#     # watchdog_thread.start()
-#     st.session_state.watchdog_started = True
-
-def runThread():
-    print("Starting thread")
-    watchdog_thread = threading.Thread(
-        target=start_watchdog,
-        daemon=True,   # 🔑 critical: exits with Streamlit
-    )
-    watchdog_thread.start()
-    print("Ending thread")
+if st.session_state.watchdog_observer is None:
+    st.session_state.watchdog_observer = start_watchdog()
+    st.success("✅ Background processor started!")
 
 # ---------------- STATUS ----------------
 
@@ -72,7 +54,7 @@ if uploaded_files:
             f.write(file.getbuffer())
     
         st.success(f"Added: {filename}")
-    runThread()
+    # runThread() # Removed: Watchdog is already running in background
     st.info("Files stored in ResumeFolder. Processing will begin automatically.")
 
 # ---------------- INPUT FILES ----------------

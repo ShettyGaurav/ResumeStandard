@@ -35,14 +35,20 @@ class ResumeFolderHandler(FileSystemEventHandler):
         get_response(file_path)
 
 
-def main():
-    print("Main App")
+
+
+def start_watchdog():
+    print("Starting Watchdog Observer")
     event_handler = ResumeFolderHandler()
     observer = Observer()
     observer.schedule(event_handler, INPUT_DIR, recursive=False)
     print(f"[INFO] Watching folder: {INPUT_DIR}")
     observer.start()
+    return observer
 
+def main():
+    print("Main App")
+    observer = start_watchdog()
     try:
         while True:
             time.sleep(1)
@@ -50,3 +56,6 @@ def main():
         observer.stop()
 
     observer.join()
+
+if __name__ == "__main__":
+    main()

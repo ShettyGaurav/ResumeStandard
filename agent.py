@@ -15,7 +15,6 @@ from markitdown import MarkItDown
 import streamlit as st
 
 
-
 from langchain.agents import create_agent
 from langchain.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, START, END
@@ -40,9 +39,8 @@ class State(TypedDict):
     classified_pages: str
     sections: Annotated[List[str], operator.add]
 
-print("API Key: ",st.secrets["GROQ_API_KEY"])
+
 llm = ChatGroq(
-    api_key=st.secrets["GROQ_API_KEY"],
     model="llama-3.3-70b-versatile",
     temperature=0,
     max_tokens=None,
@@ -562,7 +560,7 @@ def get_content_strutured(state: State):
 
 def generate_PDF(state: State):
     print("Called ")
-    try:    
+    try:
         result = generate_resume_pdf(state["parse_data"], show_contact=True)
         print(result)
         return state
@@ -581,7 +579,7 @@ workflow.add_node("get_content_structured", get_content_strutured)
 
 workflow.add_edge(START, "get_content_markdown")
 workflow.add_edge("get_content_markdown", "get_content_structured")
-workflow.add_edge("get_content_structured","generate_pdf")
+workflow.add_edge("get_content_structured", "generate_pdf")
 workflow.add_edge("generate_pdf", END)
 
 
@@ -605,7 +603,8 @@ graph = workflow.compile()
 
 INPUT_DIR = "ResumeFolder"
 
-def get_response(file_path)->str:  
+
+def get_response(file_path) -> str:
     try:
         response = graph.invoke(
             {
@@ -616,4 +615,3 @@ def get_response(file_path)->str:
     except Exception as e:
         return f"Error extracting content: {str(e)}"
     return f"the file named {file_path} is created"
-
