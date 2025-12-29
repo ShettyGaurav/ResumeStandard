@@ -1,113 +1,89 @@
 import streamlit as st
 import os
-import threading
 from pathlib import Path
-import time
-from automate import start_watchdog  # ✅ Import non-blocking starter
+from automate import start_watchdog
+from async_processor import enqueue, start_worker
 
-# ---------------- CONFIG ----------------
+
+# Helper functions
+
+def save_sync(uploaded_file):
+    path = os.path.join(INPUT_DIR, uploaded_file.name)
+    with open(path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    return path
+
+def save_async(uploaded_file):
+    path = os.path.join(ASYNC_INPUT_DIR, uploaded_file.name)
+    with open(path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    return path
+
+
+if "async_started" not in st.session_state:
+    start_worker(3)
+    st.session_state.async_started = True
+
 
 INPUT_DIR = "ResumeFolder"
 OUTPUT_DIR = "OutputFolder"
-VALID_EXTS = (".pdf", ".docx")
+ASYNC_INPUT_DIR = "ResumeFolderasync"
 
-# ---------------- SETUP ----------------
-
+# Setup
 os.makedirs(INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(ASYNC_INPUT_DIR, exist_ok=True)
 
 st.set_page_config(page_title="Resume Processor", layout="wide")
-st.title("📁 Resume Folder Processor")
-st.caption("Upload folders or files · Auto-processed via LangGraph")
 
-# ---------------- START WATCHDOG (ONCE) ----------------
-
+# Start watchdog
 if "watchdog_observer" not in st.session_state:
-    st.session_state.watchdog_observer = None
-
-if st.session_state.watchdog_observer is None:
     st.session_state.watchdog_observer = start_watchdog()
-    st.success("✅ Background processor started!")
 
-# ---------------- STATUS ----------------
+# Header
+st.title("Resume Processor")
+st.success("System Active & Monitoring")
 
-st.subheader("🟢 Background Processor Status")
-st.success("automate.py is running")
-
-# ---------------- UPLOAD SECTION ----------------
-
-st.divider()
-st.subheader("⬆️ Upload Folder or Files")
-
+# Upload
+st.subheader("Upload Files")
 uploaded_files = st.file_uploader(
-    "Upload a folder (or multiple files)",
+    "Drop PDF or DOCX files",
     type=["pdf", "docx"],
-    accept_multiple_files=True,
+    accept_multiple_files=True
 )
 
 if uploaded_files:
-    for file in uploaded_files:
-        filename = os.path.basename(file.name)
-        dest_path = os.path.join(INPUT_DIR, filename)
+    if len(uploaded_files)==1:
+        save_sync(uploaded_files[0])
+    else:
+        for file in uploaded_files:
+            path = save_async(file)
+            enqueue(path)
 
-        with open(dest_path, "wb") as f:
-            f.write(file.getbuffer())
-    
-        st.success(f"Added: {filename}")
-    # runThread() # Removed: Watchdog is already running in background
-    st.info("Files stored in ResumeFolder. Processing will begin automatically.")
+# File Lists
+col1, col2 = st.columns(2)
 
-# ---------------- INPUT FILES ----------------
-
-st.divider()
-st.subheader("📂 Input Files (ResumeFolder)")
-
-input_files = sorted(Path(INPUT_DIR).glob("*"))
-
-if not input_files:
-    st.warning("No input files found.")
-else:
-    print("Got input files")
-    for file in input_files:
-        col1, col2 = st.columns([4, 1])
-        col1.text(file.name)
-
-        with col2:
+with col1:
+    st.subheader("Input Queue")
+    input_files = list(Path(INPUT_DIR).glob("*"))
+    if not input_files:
+        st.info("No files in queue")
+    else:
+        for file in input_files:
+            st.write(f"📄 {file.name}")
             with open(file, "rb") as f:
-                st.download_button(
-                    "⬇️ Download",
-                    f,
-                    file.name,
-                    key=f"in-{file.name}",
-                )
+                st.download_button(f"Download {file.name}", f, file.name, key=f"in-{file.name}")
 
-# ---------------- OUTPUT FILES ----------------
-
-st.divider()
-st.subheader("📂 Output Files (OutputFolder)")
-
-output_files = sorted(Path(OUTPUT_DIR).glob("*"))
-
-if not output_files:
-    st.warning("No output files yet.")
-else:
-    for file in output_files:
-        col1, col2 = st.columns([4, 1])
-        col1.text(file.name)
-
-        with col2:
+with col2:
+    st.subheader("Processed Files")
+    output_files = list(Path(OUTPUT_DIR).glob("*"))
+    if not output_files:
+        st.info("No processed files yet")
+    else:
+        for file in output_files:
+            st.write(f"✅ {file.name}")
             with open(file, "rb") as f:
-                st.download_button(
-                    "⬇️ Download",
-                    f,
-                    file.name,
-                    key=f"out-{file.name}",
-                )
+                st.download_button(f"Download {file.name}", f, file.name, key=f"out-{file.name}")
 
-# ---------------- MANUAL REFRESH ----------------
-
-st.divider()
-if st.button("🔄 Refresh Output Folder"):
+if st.button("Refresh"):
     st.rerun()
-
-st.caption("Watchdog monitors ResumeFolder · LangGraph pipeline runs automatically")
