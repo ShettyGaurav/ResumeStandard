@@ -1,28 +1,42 @@
 import streamlit as st
 import os
+import logging
 from pathlib import Path
 from automate import start_watchdog
 from async_processor import enqueue, start_worker
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 # Helper functions
 
 def save_sync(uploaded_file):
     path = os.path.join(INPUT_DIR, uploaded_file.name)
+    logger.info(f"Saving file synchronously: {uploaded_file.name}")
     with open(path, "wb") as f:
         f.write(uploaded_file.getbuffer())
+    logger.info(f"File saved to: {path}")
     return path
 
 def save_async(uploaded_file):
     path = os.path.join(ASYNC_INPUT_DIR, uploaded_file.name)
+    logger.info(f"Saving file for async processing: {uploaded_file.name}")
     with open(path, "wb") as f:
         f.write(uploaded_file.getbuffer())
+    logger.info(f"File saved to: {path}")
     return path
 
 
 if "async_started" not in st.session_state:
+    logger.info("Starting async worker threads")
     start_worker(3)
     st.session_state.async_started = True
+    logger.info("Async processing system initialized")
 
 
 INPUT_DIR = "ResumeFolder"
@@ -54,11 +68,15 @@ uploaded_files = st.file_uploader(
 
 if uploaded_files:
     if len(uploaded_files)==1:
+        logger.info(f"Single file upload - using sync processing: {uploaded_files[0].name}")
         save_sync(uploaded_files[0])
+        st.success(f"Added: {uploaded_files[0].name}")
     else:
+        logger.info(f"Multiple files upload - using async processing: {len(uploaded_files)} files")
         for file in uploaded_files:
             path = save_async(file)
             enqueue(path)
+        st.success(f"Queued {len(uploaded_files)} files for processing")
 
 # File Lists
 col1, col2 = st.columns(2)
