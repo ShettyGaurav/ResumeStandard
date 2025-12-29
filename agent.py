@@ -9,10 +9,11 @@ from docx import Document
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
-from main import generate_resume_pdf
+from main import generate_and_supabaseSave
 import os
 from markitdown import MarkItDown
 import streamlit as st
+from checksupabase import file_hash, output_exists
 
 
 from langchain.agents import create_agent
@@ -561,7 +562,7 @@ def get_content_strutured(state: State):
 def generate_PDF(state: State):
     print("Called ")
     try:
-        result = generate_resume_pdf(state["parse_data"], show_contact=True)
+        result = generate_and_supabaseSave(state["parse_data"], show_contact=True)
         print(result)
         return state
     except Exception as e:
@@ -605,13 +606,16 @@ INPUT_DIR = "ResumeFolder"
 
 
 def get_response(file_path) -> str:
+    hash = file_hash(file_path)
+
+    # 🔒 STORAGE LOCK
+    if output_exists(hash):
+        print("⏭️ Already processed (storage)")
+        return "Skipped"
+
     try:
-        response = graph.invoke(
-            {
-                "file_path": file_path,
-            }
-        )
-        print("TRue")
+        graph.invoke({"file_path": file_path})
+        return "Processed"
     except Exception as e:
-        return f"Error extracting content: {str(e)}"
-    return f"the file named {file_path} is created"
+        return f"Failed: {e}"
+

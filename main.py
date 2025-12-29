@@ -1,3 +1,10 @@
+from supabase import create_client, Client
+import uuid
+from dotenv import load_dotenv
+from checksupabase import upload_pdf, list_files, download_file
+from checksupabase import file_hash, output_exists
+
+
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, white
@@ -23,7 +30,7 @@ HEADER_STYLE = ParagraphStyle(
     parent=styles["Normal"],
     fontName="Helvetica-Bold",
     fontSize=9,
-    textColor=white,      # 🔴 CRITICAL FIX
+    textColor=white,
     alignment=1,
     leading=11,
 )
@@ -35,15 +42,16 @@ CELL_STYLE = ParagraphStyle(
     fontSize=9,
     textColor=TEXT,
     leading=11,
-    wordWrap="CJK",       # 🔴 CRITICAL FIX
+    wordWrap="CJK",
 )
+
 
 def header_cell(text):
     return Paragraph(text, HEADER_STYLE)
 
+
 def body_cell(text):
     return Paragraph(text if text else "", CELL_STYLE)
-
 
 
 logging.basicConfig(
@@ -52,8 +60,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("resume_pdf_generator")
-
-
 
 
 # ---------------- PAGE CONFIG ----------------
@@ -99,7 +105,8 @@ def cell(text, bold=False):
 def output_path(name):
     os.makedirs("OutputFolder", exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"OutputFolder/{name.replace(' ', '_')}_{ts}.pdf"
+    uid = uuid.uuid4().hex[:8]  # 🔴 REQUIRED
+    return f"OutputFolder/{name.replace(' ', '_')}_{ts}_{uid}.pdf"
 
 
 def extract_handle(url):
@@ -142,18 +149,16 @@ def draw_icon_text(c, icon_path, text, start_x, center_y, font="Helvetica", size
     return start_x + ICON_SIZE + ICON_GAP + text_width
 
 
-
 def draw_header(c, name, contact, page_no, logo_path="refernce/logoWhite.png"):
     is_first_page = page_no == 1
 
     if is_first_page:
-        if contact:   # show_contact=True
+        if contact:  # show_contact=True
             header_height = FIRST_PAGE_HEADER_WITH_CONTACT
-        else:         # show_contact=False
+        else:  # show_contact=False
             header_height = FIRST_PAGE_HEADER_NO_CONTACT
     else:
         header_height = OTHER_PAGE_HEADER_HEIGHT
-
 
     # Background
     c.setFillColor(BG_DARK)
@@ -207,7 +212,7 @@ def draw_header(c, name, contact, page_no, logo_path="refernce/logoWhite.png"):
             # LinkedIn (rightmost)
             ROW_CENTER_Y = y
 
-# LinkedIn (right)
+            # LinkedIn (right)
             if linkedin_handle:
                 text_w = c.stringWidth(linkedin_handle, "Helvetica", 9)
                 total_w = 16 + 4 + text_w
@@ -259,7 +264,6 @@ def draw_header(c, name, contact, page_no, logo_path="refernce/logoWhite.png"):
                     ROW_CENTER_Y,
                 )
 
-
             # -------- ROW 2 : EMAIL + GITHUB --------
             row_y -= ROW_GAP
 
@@ -302,7 +306,6 @@ def draw_header(c, name, contact, page_no, logo_path="refernce/logoWhite.png"):
                     email_x,
                     ROW_CENTER_Y,
                 )
-
 
             y = row_y - ROW_GAP
 
@@ -386,11 +389,13 @@ def draw_skillset_table(c, skillset, y, name, contact):
         # ---- CASE 1: DOMAIN IS A LIST ----
         if isinstance(domain_data, list):
             if domain_data:
-                table_data.append([
-                    body_cell(domain),
-                    body_cell(""),
-                    body_cell(", ".join(domain_data)),
-                ])
+                table_data.append(
+                    [
+                        body_cell(domain),
+                        body_cell(""),
+                        body_cell(", ".join(domain_data)),
+                    ]
+                )
             continue
 
         # ---- CASE 2: DOMAIN IS A DICT ----
@@ -402,20 +407,24 @@ def draw_skillset_table(c, skillset, y, name, contact):
             if isinstance(values, dict):
                 for subcat, subvals in values.items():
                     if subvals:
-                        table_data.append([
-                            body_cell(domain if first_row else ""),
-                            body_cell(f"{category} ({subcat})"),
-                            body_cell(", ".join(subvals)),
-                        ])
+                        table_data.append(
+                            [
+                                body_cell(domain if first_row else ""),
+                                body_cell(f"{category} ({subcat})"),
+                                body_cell(", ".join(subvals)),
+                            ]
+                        )
                         first_row = False
 
             # Normal list
             elif isinstance(values, list) and values:
-                table_data.append([
-                    body_cell(domain if first_row else ""),
-                    body_cell(category),
-                    body_cell(", ".join(values)),
-                ])
+                table_data.append(
+                    [
+                        body_cell(domain if first_row else ""),
+                        body_cell(category),
+                        body_cell(", ".join(values)),
+                    ]
+                )
                 first_row = False
 
     # ---------------- NOTHING TO RENDER ----------------
@@ -430,7 +439,7 @@ def draw_skillset_table(c, skillset, y, name, contact):
             160,
             RIGHT_MARGIN - LEFT_MARGIN - 250,
         ],
-        repeatRows=1,   # header repeats on page breaks
+        repeatRows=1,  # header repeats on page breaks
     )
 
     table.setStyle(
@@ -439,13 +448,11 @@ def draw_skillset_table(c, skillset, y, name, contact):
                 ("BACKGROUND", (0, 0), (-1, 0), BG_DARK),
                 ("GRID", (0, 0), (-1, -1), 0.5, SECTION),
                 ("BACKGROUND", (0, 1), (-1, -1), TABLE_BG),
-
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 6),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                 ("TOPPADDING", (0, 0), (-1, -1), 4),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-
                 ("WORDWRAP", (0, 0), (-1, -1), True),
             ]
         )
@@ -461,7 +468,6 @@ def draw_skillset_table(c, skillset, y, name, contact):
     table.drawOn(c, LEFT_MARGIN, y - height)
 
     return y - height - 14
-
 
 
 def draw_professional_history(c, history, y, name, contact):
@@ -532,7 +538,7 @@ def draw_projects(c, projects, y, name, contact):
                 contact,
                 size=9.3,
             )
-        y-=3
+        y -= 3
 
         for point in project.get("points", []):
             y = draw_bullet(c, point, y, name, contact)
@@ -612,9 +618,7 @@ def generate_resume_pdf(state, show_contact=True):
         )
         if professional_history:
             logger.info("Rendering Professional History section")
-            y = draw_professional_history(
-                c, professional_history, y, name, contact
-            )
+            y = draw_professional_history(c, professional_history, y, name, contact)
         else:
             logger.debug("No Professional History found")
 
@@ -637,6 +641,9 @@ def generate_resume_pdf(state, show_contact=True):
             logger.debug("No Education data found")
 
         c.save()
+        if not os.path.exists(output_file) or os.path.getsize(output_file) == 0:
+            raise RuntimeError("PDF generation failed: empty file")
+
         logger.info("PDF generated successfully")
 
         return output_file
@@ -646,7 +653,11 @@ def generate_resume_pdf(state, show_contact=True):
         raise
 
 
+def generate_and_supabaseSave(state, show_contact=False):
+    output_file = generate_resume_pdf(state, show_contact)
 
+    hash = file_hash(output_file)  # 👈 same hash logic
+    upload_pdf(output_file, hash)
 
 
 state = {
@@ -758,4 +769,5 @@ state = {
     }
 }
 
-# render_resume_from_state(state, True)
+
+# generate_and_supabaseSave(state=state, show_contact=True)
