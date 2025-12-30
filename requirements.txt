@@ -13,3 +13,4 @@ watchdog
 reportlab
 fastapi
 streamlit
+supabase
